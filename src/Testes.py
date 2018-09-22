@@ -1,5 +1,10 @@
 import cv2
 import numpy as np
+import scipy
+import scipy.ndimage as ndimage
+import scipy.ndimage.filters as filters
+import matplotlib.pyplot as plt
+from skimage.feature import peak_local_max
 
 def filtro_branco(img1):
     img = img1.copy()
@@ -21,10 +26,26 @@ def filtro_branco(img1):
 
     return opening
 
+def vertice3(img1):
+
+    data = vertices(img1)
+    xy = peak_local_max(data, min_distance=2,threshold_abs=1500)
+    # print(xy)
+
+    black = np.zeros(data.shape, dtype = "uint8")
+    # print(data.shape, black.shape)
+    for pos in xy:
+        # print(pos)
+        black[pos[0]][pos[1]] = 255
+
+    cv2.imwrite('result.png', black)
+    cv2.imwrite('data.png', data)
+
 def vertice2(img1):
-    data = img1.copy()
     neighborhood_size = 5
     threshold = 1500
+
+    data = vertices(img1)
 
     data_max = filters.maximum_filter(data, neighborhood_size)
     maxima = (data == data_max)
@@ -34,15 +55,20 @@ def vertice2(img1):
 
     labeled, num_objects = ndimage.label(maxima)
     slices = ndimage.find_objects(labeled)
-    x, y = [], []
+    pos_arr = []
     for dy,dx in slices:
-        x_center = (dx.start + dx.stop - 1)/2
-        x.append(x_center)
-        y_center = (dy.start + dy.stop - 1)/2    
-        y.append(y_center)
+        x_center = int((dx.start + dx.stop - 1)/2)
+        y_center = int((dy.start + dy.stop - 1)/2)
+        pos_arr.append((x_center, y_center))
 
-    data[(x,y)]=[0,0,255]
-    cv2.imshow('vertice',data)
+    black = np.zeros(data.shape, dtype = "uint8")
+    print(data.shape, black.shape)
+    for pos in pos_arr:
+        print(pos)
+        black[pos[0]][pos[1]] = 255
+
+    cv2.imwrite('result.png', black)
+    cv2.imwrite('data.png', data)
 
 def vertices(img1):
     img = img1.copy()
@@ -51,35 +77,38 @@ def vertices(img1):
     dst = cv2.cornerHarris(gray,4,3,0.06)
     
     #result is dilated for marking the corners, not important
-    # = cv2.dilate(dst,None)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
+    print(kernel)
+    # dst = cv2.dilate(dst, kernel)
+    # dst = cv2.erode(dst, kernel)
 
     # Threshold for an optimal value, it may vary depending on the image.
-    corner_y=np.where(dst>0.015*dst.max())[0]
-    corner_x=np.where(dst>0.015*dst.max())[1]
-    img[dst>0.1*dst.max()]=[0,0,255]
-    cv2.line(img,(corner_x[0],corner_y[0]),(corner_x[100],corner_y[100]),(0,255,0),2)
-    return img
+    # corner_y=np.where(dst>0.015*dst.max())[0]
+    # corner_x=np.where(dst>0.015*dst.max())[1]
+    # img[dst>0.1*dst.max()]=[0,0,255]
+    # cv2.line(img,(corner_x[0],corner_y[0]),(corner_x[100],corner_y[100]),(0,255,0),2)
+    return dst
 
-def reconhecer_linhas(img1):
-    try:
-        img = img1
-        minLineLength = 2
-        maxLineGap = 1000
-        lines = cv2.HoughLinesP(img,1,np.pi/180,200,maxLineGap,minLineLength)
-        for line in lines:
-            for x1,y1,x2,y2 in line:
-                cv2.line(img1,(x1,y1),(x2,y2),(255,255,0),2)
-    except:
-        pass
+# def reconhecer_linhas(img1):
+#     try:
+#         img = img1
+#         minLineLength = 2
+#         maxLineGap = 1000
+#         lines = cv2.HoughLinesP(img,1,np.pi/180,200,maxLineGap,minLineLength)
+#         for line in lines:
+#             for x1,y1,x2,y2 in line:
+#                 cv2.line(img1,(x1,y1),(x2,y2),(255,255,0),2)
+#     except:
+#         pass
 
-    return img
+#     return img
     
 
 filename = '../img/caixa5.jpg'
 img = cv2.imread(filename)
 
 img = filtro_branco(img)
-img = vertice2(img)
+img = vertice3(img)
 
 if cv2.waitKey(0) & 0xff == 27:
     cv2.destroyAllWindows()
