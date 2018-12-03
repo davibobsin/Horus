@@ -4,6 +4,8 @@ import numpy as np
 import glob
 
 CALIB_PARAM_FILE = "../config/calib_param.cnf"
+TABLE_PARAM_FILE = "../config/table_param.cnf"
+IMAGE_FILE = '../config/temp/Base.png'
 MESA_LARGURA = 445-18      # Medida em mm   
 MESA_PROFUNDIDADE = 643-18 # Medida em mm
 CAMERA_ID = 0
@@ -12,6 +14,12 @@ SUP = 0
 INF = 1
 DIR = 2
 ESQ = 3
+
+def salvar_parametros(ptos1,ptos2,H):
+    file = open(TABLE_PARAM_FILE, "w+")
+    file.write("P1=np.array(" + str(ptos1.tolist()) + ")\n")
+    file.write("P2=np.array(" + str(ptos2.tolist()) + ")\n")
+    file.write("H=np.array(" + str(H.tolist()) + ")")
 
 def ler_parametros():
     global K,DIM,D
@@ -269,6 +277,21 @@ def corner_points(m,b):
 
     return rect
 
+def mouse2(event, x, y, flags, param):
+    if event == cv2.EVENT_LBUTTONDOWN:
+        cv2.circle(img_flat,(x,y), 2, (0,0,255), -1)
+        cv2.imshow('Flat',img_flat)
+        #print('X1:'+str(x)+' Y1:'+str(y))
+        # Find corner points
+        pts2 = np.matmul(np.linalg.inv(h),np.array([x,y,1]).T)
+        x_offs = 9
+        y_offs = 8
+        pts_mesa = (pts2[0]/pts2[2]-73+x_offs,pts2[1]/pts2[2]-118+y_offs)
+        pts_draw = (int(pts2[0]/pts2[2]),int(pts2[1]/pts2[2]))
+        print(pts_mesa)
+        cv2.circle(img,pts_draw, 2, (0,0,255), -1)
+        cv2.imshow('image',img)
+
 def mouse(event, x, y, flags, param):
     if event == cv2.EVENT_LBUTTONDOWN:
         cv2.circle(img,(x,y), 2, (0,255,0), -1)
@@ -316,9 +339,9 @@ ler_parametros()
 ##    break
 # Tira foto
 
-#img = cv2.imread('../img/fotos3/FotoLimpo.jpg')
+#img = cv2.imread('../img/fotos3/FotoTarugo5.jpg')
 
-img = cv2.imread('../config/temp/Base.png')
+img = cv2.imread(IMAGE_FILE)
 
 #ret,img = vid.read() 
 #img = corrigir(img)
@@ -367,6 +390,8 @@ dst = np.array([
 
 M = cv2.getPerspectiveTransform(ptos, dst)
 img_flat = cv2.warpPerspective(img, M, (maxWidth, maxHeight))
+cv2.namedWindow('Flat')
+cv2.setMouseCallback('Flat',mouse2)
 cv2.imshow('Flat',img_flat)
 
 # Encontra a Matriz Homografica
@@ -377,6 +402,9 @@ points1[2, :] = [MESA_LARGURA,MESA_PROFUNDIDADE]
 points1[3, :] = [0,MESA_PROFUNDIDADE]
 
 h, mask = cv2.findHomography(ptos, points1, cv2.RANSAC)
+
+# Salvar dados no arquivo 'table_param.cnf'
+salvar_parametros(ptos,points1,h)
 
 # Encontra contornos e desenha
 ##try:

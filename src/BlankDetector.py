@@ -1,46 +1,40 @@
-from skimage.measure import compare_ssim
-import cv2
 import numpy as np
-import argparse
-import imutils
+import cv2
 
-foto_tarugo = ('../img/fotos3/FotoTarugo.jpg','../img/fotos3/FotoTarugo5.jpg','../img/fotos3/FotoTarugo6.jpg')
+fotos = ('../img/fotos3/FotoLimpo.jpg','../img/fotos3/FotoTarugo.jpg','../img/fotos3/FotoTarugo5.jpg','../img/fotos3/FotoTarugo6.jpg')
 
-im_vazio = cv2.imread('../img/fotos3/FotoLimpo.jpg')
-im_tarugo = cv2.imread(foto_tarugo[0])
+def remove_blobs(img):
+    #find all your connected components (white blobs in your image)
+    nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(img, connectivity=8)
+    #connectedComponentswithStats yields every seperated component with information on each of them, such as size
+    #the following part is just taking out the background which is also considered a component, but most of the time we don't want that.
+    sizes = stats[1:, -1]; nb_components = nb_components - 1
 
-# convert the images to grayscale
-grayA = cv2.cvtColor(im_vazio, cv2.COLOR_BGR2GRAY)
-grayB = cv2.cvtColor(im_tarugo, cv2.COLOR_BGR2GRAY)
+    # minimum size of particles we want to keep (number of pixels)
+    #here, it's a fixed value, but you can set it as you want, eg the mean of the sizes or whatever
+    min_size = 10
 
-# compute the Structural Similarity Index (SSIM) between the two
-# images, ensuring that the difference image is returned
-(score, diff) = compare_ssim(grayA, grayB, full=True)
-diff = (diff * 255).astype("uint8")
-print("SSIM: {}".format(score))
+    #your answer image
+    img2 = np.zeros((output.shape),dtype='uint8')
+    #for every component in the image, you keep it only if it's above min_size
+    for i in range(0, nb_components):
+        if sizes[i] >= min_size:
+            img2[output == i + 1] = 255
+    return img2
 
-# threshold the difference image, followed by finding contours to
-# obtain the regions of the two input images that differ
-thresh = cv2.threshold(diff, 0, 255,
-	cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
-cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
-	cv2.CHAIN_APPROX_SIMPLE)
-cnts = cnts[0] if imutils.is_cv2() else cnts[1]
+imlimpo = cv2.imread(fotos[0])
+imblank = cv2.imread(fotos[1])
 
-# loop over the contours
-for c in cnts:
-	# compute the bounding box of the contour and then draw the
-	# bounding box on both input images to represent where the two
-	# images differ
-	(x, y, w, h) = cv2.boundingRect(c)
-	cv2.rectangle(imageA, (x, y), (x + w, y + h), (0, 0, 255), 2)
-	cv2.rectangle(imageB, (x, y), (x + w, y + h), (0, 0, 255), 2)
+edgelimpo = cv2.Canny(imlimpo,100,200)
+edgeblank = cv2.Canny(imblank,100,200)
 
-# show the output images
-cv2.imshow("Original", imageA)
-cv2.imshow("Modified", imageB)
-cv2.imshow("Diff", diff)
-cv2.imshow("Thresh", thresh)
+im3 = edgeblank-edgelimpo
+im3 = remove_blobs(im3)
+
+cv2.imshow('Original',cv2.resize(edgelimpo,(1000,600)))
+cv2.imshow('Tarugo  ',cv2.resize(edgeblank,(1000,600)))
+
+im3 = edgeblank-edgelimpo
 
 cv2.waitKey(0)
 cv2.destroyAllWindows()

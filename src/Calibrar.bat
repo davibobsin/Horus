@@ -1,0 +1,2 @@
+python Calibrar.py
+pause

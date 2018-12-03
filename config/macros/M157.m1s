@@ -1,0 +1,49 @@
+Code "G0 X ... Y ..." 'Editar aqui para o ponto no centro da peça...
+
+While IsMoving ()
+Sleep (200)
+Wend
+
+
+
+'Copie daqui
+'-------------------
+CurrentFeed = GetOemDRO(818)
+DoSpinStop()
+
+ZMove = 50.00 'Distância na qual a maquina procura a sonda. No caso, ela desce 2 cm antes de abortar 
+ZOffset = 1.9 ' Altura da sua placa
+ZSal = ZOffset + 2.00 'Depois que a sonda faz contato, ela sobe 2 mm + a altura da sonda.
+
+StopZmove = 0
+If GetOemLed (825)=0 Then
+DoOEMButton (1010)
+Code "G4 P2.5"
+Code "G31 Z-"& ZMove & "F25"
+While IsMoving()
+Sleep(200)
+Wend
+Probepos = GetVar(2002)
+If Probepos = - ZMove Then
+responce = MsgBox ("**ERRO** " , 4 , "Erro na sonda" )
+Code "G0 Z10"
+StopZmove = 1
+Code "F" &CurrentFeed
+End If
+If StopZmove = 0 Then
+Code "G0 Z" & Probepos
+While IsMoving ()
+Sleep (200)
+Wend
+Call SetDro (2, ZOffset)
+Code "G4 P1"
+Code "G0 Z" & ZSal
+Code "(Z zeroed)"
+Code "F" &CurrentFeed
+End If
+Else
+Code "(Check Ground Probe)"
+End If
+Exit Sub
+'-------------------
+'até aqui 

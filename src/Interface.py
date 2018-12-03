@@ -2,6 +2,7 @@ import cv2
 import sys
 import numpy as np
 
+IMAGE_FILE = '../config/temp/Base.png'
 CALIB_PARAM_FILE = "../config/calib_param.cnf"
 CAMERA_ID = 0
 
@@ -90,6 +91,27 @@ def corrigir(img1):
     undistorted_img = cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
     return undistorted_img
 
+def escrever_texto(img,texto):
+    font                   = cv2.FONT_HERSHEY_SIMPLEX
+    bottomLeftCornerOfText = (300,400)
+    fontScale              = 1.2
+    fontColor              = (255,255,255)
+    lineType               = 2
+    
+    cv2.putText(img, texto,
+    bottomLeftCornerOfText, 
+    font, 
+    fontScale,
+    fontColor,
+    lineType)
+    return img
+
+
+if len(sys.argv)<1:
+    sys.exit()
+else:
+    print(sys.argv[0])
+
 ler_parametros()
 
 vid = cv2.VideoCapture(CAMERA_ID)
@@ -97,27 +119,43 @@ vid.set(cv2.CAP_PROP_FRAME_WIDTH,1920)
 vid.set(cv2.CAP_PROP_FRAME_HEIGHT,1080)
 
 flag=1
+camera = CAMERA_ID
 while flag:
-    
-    ret,img = vid.read()
-    img = corrigir(img)
-    #img = cv2.imread('../img/fotos3/FotoLimpo.jpg')
+    try:
+        ret,img = vid.read()
+        img = corrigir(img)
+        #img = cv2.imread('../img/fotos3/FotoLimpo.jpg')
 
-    # Processa a imagem
-    cont = filtro(img)
-    cont = remove_blobs(cont)
-    cont = contorno(cont,img)
+        # Processa a imagem
+        cont = filtro(img)
+        cont = remove_blobs(cont)
+        cont = contorno(cont,img)
 
-    #Preparar imagem para mostrar
+        #Preparar imagem para mostrar
 ##    rows,cols,c = cont.shape
 ##    M = cv2.getRotationMatrix2D((cols/2,rows/2),-90,1)
 ##    dst = cv2.warpAffine(cont,M,(cols,rows))
-    dst = cv2.resize(cont,(1000,600))
-    cv2.imshow('Camera',dst)
+        dst = cv2.resize(cont,(1000,600))
+        cv2.imshow('Camera',dst)
+        
+    except:
+        img = cv2.imread('../img/erro_camera.png')
+        img = escrever_texto(img,'ERRO NA CAMERA '+str(camera))
+        cv2.imshow('Camera',img)
     
-    res = cv2.waitKey(1)
-    if res==TECLA_ENTER:
+    key_pressed = cv2.waitKey(0)
+    
+    if key_pressed>47 and key_pressed<58:
+        camera = key_pressed-48
+        vid = cv2.VideoCapture(camera)
+        vid.set(cv2.CAP_PROP_FRAME_WIDTH,1920)
+        vid.set(cv2.CAP_PROP_FRAME_HEIGHT,1080)
+
+    if key_pressed==27:
         flag=0
-        cv2.imwrite('../config/temp/Base.png',img)
+    
+    if key_pressed==TECLA_ENTER:
+        flag=0
+        cv2.imwrite(IMAGE_FILE,img)
         
 cv2.destroyAllWindows()
