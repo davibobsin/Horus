@@ -2,7 +2,7 @@ import cv2
 import sys
 import numpy as np
 
-IMAGE_FILE = '../config/temp/Base.png'
+IMAGE_FILE = '../config/temp/Imagem.png'
 CALIB_PARAM_FILE = "../config/calib_param.cnf"
 CAMERA_ID = 0
 
@@ -107,10 +107,11 @@ def escrever_texto(img,texto):
     return img
 
 
-if len(sys.argv)<1:
+if len(sys.argv)<2:
     sys.exit()
 else:
-    print(sys.argv[0])
+    print(sys.argv[1])
+IMAGE_FILE = sys.argv[1]
 
 ler_parametros()
 
@@ -122,9 +123,10 @@ flag=1
 camera = CAMERA_ID
 while flag:
     try:
+        global img
         ret,img = vid.read()
         img = corrigir(img)
-        #img = cv2.imread('../img/fotos3/FotoLimpo.jpg')
+        #img = cv2.imread('../config/temp/Base.png')
 
         # Processa a imagem
         cont = filtro(img)
@@ -136,6 +138,7 @@ while flag:
 ##    M = cv2.getRotationMatrix2D((cols/2,rows/2),-90,1)
 ##    dst = cv2.warpAffine(cont,M,(cols,rows))
         dst = cv2.resize(cont,(1000,600))
+        
         cv2.imshow('Camera',dst)
         
     except:
@@ -143,7 +146,7 @@ while flag:
         img = escrever_texto(img,'ERRO NA CAMERA '+str(camera))
         cv2.imshow('Camera',img)
     
-    key_pressed = cv2.waitKey(0)
+    key_pressed = cv2.waitKey(100)
     
     if key_pressed>47 and key_pressed<58:
         camera = key_pressed-48

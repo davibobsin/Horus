@@ -1,4 +1,4 @@
-ï»¿Code "G69" 'Reseta rotaÃ§Ã£o se tiver
+Code "G69" 'Reseta rotação se tiver
 Code "G52 X... Y...." 'Coordenadas do ponto zero.. DAVI ESCREVE AQUI
-Code "G68 A... B... R..." 'RotaÃ§Ã£o do eixo de coordenadas, A e B sÃ£o as coordenadas X e Y do ponto de rotaÃ§Ã£o e R Ã© o angulo de rotacao em graus
+Code "G68 A... B... R..." 'Rotação do eixo de coordenadas, A e B são as coordenadas X e Y do ponto de rotação e R é o angulo de rotacao em graus
 

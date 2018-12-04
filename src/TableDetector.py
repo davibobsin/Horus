@@ -6,7 +6,7 @@ import glob
 CALIB_PARAM_FILE = "../config/calib_param.cnf"
 TABLE_PARAM_FILE = "../config/table_param.cnf"
 IMAGE_FILE = '../config/temp/Base.png'
-MESA_LARGURA = 445-18      # Medida em mm   
+MESA_LARGURA = 445-12      # Medida em mm   
 MESA_PROFUNDIDADE = 643-18 # Medida em mm
 CAMERA_ID = 0
 
@@ -239,7 +239,7 @@ def remove_blobs(img):
 
     # minimum size of particles we want to keep (number of pixels)
     #here, it's a fixed value, but you can set it as you want, eg the mean of the sizes or whatever
-    min_size = 200
+    min_size = 1000
 
     #your answer image
     img2 = np.zeros((output.shape),dtype='uint8')
@@ -258,7 +258,44 @@ def split_mid(img_hor,img_ver,mid_point_hor,mid_point_ver):
     img_dw[:,mid_point_hor:] = img_hor[:,mid_point_hor:]
     img_lf[:mid_point_ver,:] = img_ver[:mid_point_ver,:]
     img_rt[mid_point_ver:,:] = img_ver[mid_point_ver:,:]
+    cv2.imwrite('Cima.jpg',img_up)
+    cv2.imwrite('Baixo.jpg',img_dw)
+    cv2.imwrite('Esquerda.jpg',img_lf)
+    cv2.imwrite('Direita.jpg',img_rt)
     return img_up,img_dw,img_lf,img_rt
+
+def mid_points(img,axis=0):
+    # Axis = 0 : linha na horizontal
+    # Axis = 1 : Linha na vertical
+
+    res = np.zeros(img.shape,dtype='uint8')
+    m_X =0
+    m_Y =0
+    m_XY=0
+    m_XX=0
+    c=0
+    for k in range(img.shape[axis]):
+        media=0
+        n=0
+        flag=0
+        for l in range(img.shape[1-axis]):
+            i = k
+            j = l
+            if img[i][j] > 0:
+                flag=1
+                n=n+1
+                c=c+1
+                media = (media*(n-1)+j)/n
+        if flag:
+            m_X = (m_X*(c-1)+i)/c
+            m_Y = (m_Y*(c-1)+media)/c
+            m_XY = (m_XY*(c-1)+media*i)/c
+            m_XX = (m_XX*(c-1)+i*i)/c
+        res[i][int(media)] = 255
+    print(c)
+    a = (m_X*m_Y-m_XY)/(m_X*m_X-m_XX)
+    b = m_Y-a*m_X
+    return res,a,b
 
 def corner_points(m,b):
     rect2 = np.zeros((4, 2), dtype = "float32")
@@ -320,6 +357,12 @@ def draw_progress(img,percent):
     return img2
 global img,h,img_flat
 
+def bw2rgb(img):
+    img2 = np.zeros((img.shape[0],img.shape[1],3),dtype='uint8')
+    for i in range(3):
+        img2[:,:,i] = img[:,:]
+    return img2
+
 ler_parametros()
 #print('K:'+str(K)+' DIM:'+str(DIM)+' D:'+str(D))
 
@@ -366,6 +409,7 @@ img_arr[SUP],img_arr[INF],img_arr[DIR],img_arr[ESQ] = split_mid(img_amarelo,img_
 # Encontra linhas
 m = [0,0,0,0]
 b = [0,0,0,0]
+
 for i in range(4):
     img_wait = draw_progress(cv2.resize(img,(1000,600)),i*25)
     cv2.imshow('image',img_wait)
@@ -390,9 +434,9 @@ dst = np.array([
 
 M = cv2.getPerspectiveTransform(ptos, dst)
 img_flat = cv2.warpPerspective(img, M, (maxWidth, maxHeight))
-cv2.namedWindow('Flat')
-cv2.setMouseCallback('Flat',mouse2)
-cv2.imshow('Flat',img_flat)
+##cv2.namedWindow('Flat')
+##cv2.setMouseCallback('Flat',mouse2)
+##cv2.imshow('Flat',img_flat)
 
 # Encontra a Matriz Homografica
 points1 = np.zeros((4, 2), dtype=np.float32)
@@ -406,25 +450,9 @@ h, mask = cv2.findHomography(ptos, points1, cv2.RANSAC)
 # Salvar dados no arquivo 'table_param.cnf'
 salvar_parametros(ptos,points1,h)
 
-# Encontra contornos e desenha
-##try:
-##    im2, contours_sup, hierarchy = cv2.findContours(img_sup,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-##    im2, contours_inf, hierarchy = cv2.findContours(img_inf,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-##    im2, contours_dir, hierarchy = cv2.findContours(img_dir,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-##    im2, contours_esq, hierarchy = cv2.findContours(img_esq,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-##    cv2.drawContours(img, contours_sup, -1, (255,0,0), 3)
-##    cv2.drawContours(img, contours_inf, -1, (0,255,0), 3)
-##    cv2.drawContours(img, contours_dir, -1, (0,0,255), 3)
-##    cv2.drawContours(img, contours_esq, -1, (0,255,255), 3)
-##except:
-##    print('Cassião')
-cv2.namedWindow("image")
-cv2.setMouseCallback("image", mouse)
-cv2.imshow('image',img)
-
-#img0 = linhas(img0,img)
-
-##    if cv2.waitKey(1) & 0xFF == ord('q'):
-##        break
-cv2.waitKey(0)
+##cv2.namedWindow("image")
+##cv2.setMouseCallback("image", mouse)
+##cv2.imshow('image',cv2.resize(img,(1000,600)))
+##
+##cv2.waitKey(0)
 cv2.destroyAllWindows()

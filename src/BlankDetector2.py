@@ -71,7 +71,7 @@ def filtro(img1):
     img_HSV = cv2.cvtColor(img1,cv2.COLOR_BGR2HSV)
     # Filtro amarelo
     up_ylw = np.array([30, 255, 255])
-    lw_ylw = np.array([10, 40, 40])
+    lw_ylw = np.array([10, 30, 30])
     img_yellow = cv2.inRange(img_HSV,lw_ylw,up_ylw)
 
     return img_yellow
@@ -96,22 +96,21 @@ def mask(img,pts):
 ler_parametros()
 
 
-bui = cv2.imread('building.jpg')
 
-lines(bui)
-
-
-fotos = ('../img/fotos3/FotoLimpo.jpg','../img/fotos3/FotoTarugo5.jpg')
+fotos = ('../img/fotos3/FotoLimpo.jpg','../img/fotos3/FotoTarugo5b.jpg')
 
 img = mask(cv2.imread(fotos[0]),P1)
 img_tarugo = mask(cv2.imread(fotos[1]),P1)
 
+mask2 = filtro(img_tarugo)
+cv2.imshow('Tarugo',mask2)
 
-mask2 = filtro(img)
+cv2.waitKey(0)
+
 mask2 = remove_blobs(mask2)
 mask2 = bw2rgb(mask2)
+img1 = cv2.bitwise_and(img,mask2)
 
-#img2 = cv2.bitwise_and(img,mask2)
 
 # Linhas
 img1 = filtro(img_tarugo)
@@ -119,11 +118,11 @@ img1 = remove_blobs(img1)
 
 
 ### Filtro de cor
-##img1 = filtro(img_tarugo)
-##img1 = remove_blobs(img1)
-##kernel = np.ones((5,5),np.uint8)
-##img1 = cv2.morphologyEx(img1, cv2.MORPH_CLOSE, kernel)
-##im2, contours, hierarchy = cv2.findContours(img1,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+img1 = filtro(img_tarugo)
+img1 = remove_blobs(img1)
+kernel = np.ones((5,5),np.uint8)
+img1 = cv2.morphologyEx(img1, cv2.MORPH_CLOSE, kernel)
+im2, contours, hierarchy = cv2.findContours(img1,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
 
 
 cnt = contours[0]
