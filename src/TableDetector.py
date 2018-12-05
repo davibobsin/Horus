@@ -206,17 +206,11 @@ def linhas(img0,img2):
         
     return img2
 def linha_min_quadrados(img0):
-    ptsX = np.array([])
-    ptsY = np.array([])
-    for lin in range(img0.shape[0]):
-        for col in range(img0.shape[1]):
-            if img0[lin][col]>0:
-                ptsX = np.append(ptsX,lin)
-                ptsY = np.append(ptsY,col)
+    nonZero = np.squeeze(cv2.findNonZero(img0))
     
-    
-    X = ptsX
-    Y = ptsY
+    X = nonZero[:,1].astype(float)
+    Y = nonZero[:,0].astype(float)
+
     m =(mean(X)*mean(Y)-mean(X*Y))/(mean(X)*mean(X)-mean(X*X))
     b = mean(Y)-m*mean(X)
     return m,b
