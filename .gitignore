@@ -2,3 +2,4 @@
 /horus/build/
 GIT_IGNORE
 */__pycache__/
+.vscode
