@@ -63,8 +63,8 @@ def run(theta, alpha, func, jac, guess, plt_local, kernel=5, noiseless=np.array(
     error_list = []
 
     for i in range(half_kernel, theta.size - half_kernel):
-        kernel_theta = theta[i - half_kernel:i + half_kernel]
-        kernel_alpha = alpha[i - half_kernel:i + half_kernel]
+        kernel_theta = theta[i - half_kernel:i + half_kernel + 1]
+        kernel_alpha = alpha[i - half_kernel:i + half_kernel + 1]
         first_guess = guess(kernel_theta, kernel_alpha)
         params, params_covariance = optimize.curve_fit(
             func, kernel_theta, kernel_alpha, p0=first_guess, jac=jac)
@@ -74,6 +74,14 @@ def run(theta, alpha, func, jac, guess, plt_local, kernel=5, noiseless=np.array(
 
         fitted = func(trimmed_theta, r, phi)
 
+        # plt_local.figure(figsize=(6, 4))
+        # plt_local.scatter(np.degrees(trimmed_theta), np.degrees(
+        #     trimmed_alpha), color=COLORS[1])
+        # plt_local.scatter(np.degrees(trimmed_theta), np.degrees(
+        #     fitted), color=COLORS[2])
+
+        # plt_local.show()
+
         error = trimmed_alpha-fitted
 
         error_list.append(error)
@@ -81,6 +89,11 @@ def run(theta, alpha, func, jac, guess, plt_local, kernel=5, noiseless=np.array(
     error_2d = np.stack(error_list, axis=0)
 
     error_reciprocal = error_2d+error_2d.T
+    
+    # plt_local.figure(figsize=(6, 4))
+    # plt_local.imshow(error_reciprocal)
+
+    # plt_local.show()
 
     correlation = normpdf(error_reciprocal, 0, std(error_reciprocal, 0)/100)
 
@@ -91,6 +104,11 @@ def run(theta, alpha, func, jac, guess, plt_local, kernel=5, noiseless=np.array(
     dissimilarity = 1-correlation
     np.fill_diagonal(dissimilarity, 0)
     dissimilarity = (dissimilarity.T+dissimilarity)/2
+    
+    # plt_local.figure(figsize=(6, 4))
+    # plt_local.imshow(dissimilarity)
+
+    # plt_local.show()
 
     hierarchy = linkage(squareform(dissimilarity), method='average')
     labels = fcluster(hierarchy, 0.5, criterion='distance')
@@ -109,13 +127,13 @@ def run(theta, alpha, func, jac, guess, plt_local, kernel=5, noiseless=np.array(
         segment_indices = (labels == x)
 
         local_error = dissimilarity[:, segment_indices][segment_indices, :]
-        vertical_error = dissimilarity[:, segment_indices]
+        # vertical_error = dissimilarity[:, segment_indices]
 
         cluster_error = sum(local_error, 0)/local_error.shape[0]
         cluster_alpha = trimmed_alpha[segment_indices]
         cluster_theta = trimmed_theta[segment_indices]
 
-        plt.plot(np.degrees(cluster_theta), cluster_error)
+        plt_local.plot(np.degrees(cluster_theta), cluster_error)
 
         first_guess = guess(cluster_theta, cluster_alpha)
 
@@ -134,8 +152,8 @@ def run(theta, alpha, func, jac, guess, plt_local, kernel=5, noiseless=np.array(
 
     params_list = sorted(params_list, key=lambda l: l[1], reverse=True)
 
-    r = params_list[:][0]
-    phi = params_list[:][1]
+    r = [row[0] for row in params_list]
+    phi = [row[1] for row in params_list]
 
     Xs, Ys = Section.to_xy(r, phi, True)
 
@@ -143,7 +161,7 @@ def run(theta, alpha, func, jac, guess, plt_local, kernel=5, noiseless=np.array(
         # plt_local.figure(figsize=(6, 4))
         # plt_local.imshow(correlation)
 
-        plt_local.figure(figsize=(6, 4))
+        # plt_local.figure(figsize=(6, 4))
         # plt_local.imshow(u)
 
         plt_local.figure(figsize=(6, 4))
@@ -154,10 +172,10 @@ def run(theta, alpha, func, jac, guess, plt_local, kernel=5, noiseless=np.array(
 
         plt_local.figure(figsize=(6, 4))
         plt_local.plot(Xs, Ys, marker='o', color=COLORS[2])
-        plt.gca().set_aspect('equal', adjustable='box')
+        plt_local.gca().set_aspect('equal', adjustable='box')
 
         plt_local.figure(figsize=(6, 4))
-        plt.subplot(2, 1, 2)
+        plt_local.subplot(2, 1, 2)
         plt_local.scatter(np.degrees(trimmed_theta),
                           np.degrees(trimmed_alpha), color=COLORS[1])
         plt_local.plot(np.degrees(trimmed_theta), np.degrees(
@@ -167,9 +185,9 @@ def run(theta, alpha, func, jac, guess, plt_local, kernel=5, noiseless=np.array(
         if noiseless.any():
             plt_local.plot(np.degrees(theta), np.degrees(
                 noiseless), color=COLORS[0])
-        plt.subplot(2, 1, 1)
+        plt_local.subplot(2, 1, 1)
         plt_local.plot(Xs, Ys, marker='o', color=COLORS[2])
-        plt.gca().set_aspect('equal', adjustable='box')
+        plt_local.gca().set_aspect('equal', adjustable='box')
 
     return r, phi
 
@@ -177,7 +195,7 @@ def run(theta, alpha, func, jac, guess, plt_local, kernel=5, noiseless=np.array(
 def main():
     """main"""
 
-    h = 15
+    h = 100
 
     def f(theta, r, phi):
         return func(theta, r, phi, h)
@@ -188,56 +206,63 @@ def main():
     def g(theta, alpha):
         return guess(theta, alpha, h)
 
-    points = np.array([[1, 0], [0, 1], [-1, 0], [-1, -1], [1, -1]])
-    # points = np.array([[1,0.5],[0,1],[-1,0.5],[-1,-.5],[0,-1],[1,-.5]])
-    # points = np.array([[1,0],[0,1],[-1,0],[0,-1]])
-    section = Section(points)
-
-    length = 36*2
-    theta = np.linspace(0, 2*np.pi, length)
-
-    result = section.rotate(theta)
-
     cam = Camera(h)
 
-    # Seed the random number generator for reproducibility
-    np.random.seed(0)
+    if SIMULATE:
+        points = np.array([[1, 0], [0, 1], [-1, 0], [-1, -1], [1, -1]])
+        # points = np.array([[1,0.5],[0,1],[-1,0.5],[-1,-.5],[0,-1],[1,-.5]])
+        # points = np.array([[1,0],[0,1],[-1,0],[0,-1]])
+        section = Section(points)
 
-    true_alpha = cam.measure(result)
-    noisy_alpha = true_alpha + np.random.normal(size=length)/2000
+        length = 36*2
+        theta = np.linspace(0, 2*np.pi, length)
 
-    r = h*np.sin(noisy_alpha)
-    phi = noisy_alpha-theta
+        result = section.rotate(theta)
 
-    Xs, Ys = section.to_xy(r, phi, True)
+        # Seed the random number generator for reproducibility
+        np.random.seed(0)
 
-    run(theta, noisy_alpha, func=f, jac=j, guess=g,
-        kernel=5, plt_local=plt, noiseless=true_alpha)
+        true_alpha = cam.simulate_measurement(result)
+        noisy_alpha = true_alpha + np.random.normal(size=length)/2000
 
-    if PLOT:
-        section.plot(plt)
-        plt.plot(Xs, Ys, marker='o', color=COLORS[1])
-        plt.gca().set_aspect('equal', adjustable='box')
+        r = h*np.sin(noisy_alpha)
+        phi = noisy_alpha-theta
 
-    #     plt.figure(figsize=(6, 4))
-    #     plt.subplot(2, 1, 1)
-    #     section.Plot(plt)
-    #     plt.subplot(2, 1, 2)
-    #     plt.plot(np.degrees(theta), np.degrees(true_alpha))
+        Xs, Ys = Section.to_xy(r, phi, True)
 
-        plt.figure(figsize=(6, 4))
-        plt.subplot(2, 1, 1)
-        section.plot(plt)
-        plt.plot(Xs, Ys, marker='o', color=COLORS[1])
-        plt.gca().set_aspect('equal', adjustable='box')
-        plt.subplot(2, 1, 2)
-        plt.plot(np.degrees(theta), np.degrees(true_alpha))
-        plt.scatter(np.degrees(theta), np.degrees(
-            noisy_alpha), color=COLORS[1])
+        run(theta, noisy_alpha, func=f, jac=j, guess=g,
+            kernel=3, plt_local=plt, noiseless=true_alpha)
+    else:
+        theta, noisy_alpha = cam.measure("./img/0520_2301/")
+
+        run(theta, noisy_alpha, func=f, jac=j, guess=g,
+            kernel=5, plt_local=plt)
+
+    # if PLOT:
+        # section.plot(plt)
+        # plt.plot(Xs, Ys, marker='o', color=COLORS[1])
+        # plt.gca().set_aspect('equal', adjustable='box')
+
+        # plt.figure(figsize=(6, 4))
+        # plt.subplot(2, 1, 1)
+        # section.Plot(plt)
+        # plt.subplot(2, 1, 2)
+        # plt.plot(np.degrees(theta), np.degrees(true_alpha))
+
+        # plt.figure(figsize=(6, 4))
+        # plt.subplot(2, 1, 1)
+        # section.plot(plt)
+        # plt.plot(Xs, Ys, marker='o', color=COLORS[1])
+        # plt.gca().set_aspect('equal', adjustable='box')
+        # plt.subplot(2, 1, 2)
+        # plt.plot(np.degrees(theta), np.degrees(true_alpha))
+        # plt.scatter(np.degrees(theta), np.degrees(
+        #     noisy_alpha), color=COLORS[1])
 
     plt.show()
 
 
-PLOT = False
+PLOT = True
+SIMULATE = False
 COLORS = plt.rcParams['axes.prop_cycle'].by_key()['color']
 main()
